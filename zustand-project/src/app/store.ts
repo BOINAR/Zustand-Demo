@@ -1,45 +1,66 @@
 import {create} from "zustand";
+import {z} from "zod";
 
-type Rating = {
-  rate: number; // La note, par exemple 3.9
-  count: number; // Le nombre d'évaluations, par exemple 120
-};
+const RatingSchema = z.object({
+  rate: z.number(),
+  count: z.number()
+});
 
-type Product = {
-  id: number;
-  title: string;
-  price: number;
-  description: string;
-  category: string;
-  image: string;
-  rating: Rating;
-};
+const ProductSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  price: z.number(),
+  description: z.string(),
+  category: z.string(),
+  image: z.string(),
+  rating: RatingSchema
+});
+
+type Product = z.infer<typeof ProductSchema>;
 
 type Store = {
-  card: Product[]; // Produits récupéré dans la page de la liste des produits
+  card: (Product & {quantity: number; expanded: boolean})[]; // Produits récupéré dans la page de la liste des produits
   cart: (Product & {quantity: number})[]; // Produits ajoutés au panier
   isCartOpen: boolean; // État du dropdown
   toggleCartDropdown: (status: boolean) => void;
   totalQuantity: number; // Total des quantités dans le panier
-  initializeProducts: (data: Product[]) => void;
   addToCart: (product: Product) => void;
   removeFromCart: (id: number) => void;
-  increment: () => void;
-  decrement: () => void;
-  expanded: boolean;
-  quantity: number;
-  toggleExpanded: (status: boolean) => void;
-  fetchProduct: () => Promise<Product[]>;
+  increment: (id: number) => void;
+  decrement: (id: number) => void;
+
+  toggleExpanded: (id: number) => void;
+  fetchProduct: () => void;
 };
 
 const useStore = create<Store>(set => ({
   // card
 
-  quantity: 0,
-  expanded: false,
-  increment: () => set(state => ({quantity: state.quantity + 1})),
-  decrement: () => set(state => ({quantity: state.quantity - 1})),
-  toggleExpanded: (status: boolean) => set({expanded: status}),
+  increment: productId =>
+    set(state => ({
+      card: state.card.map(p =>
+        p.id === productId ? {...p, quantity: p.quantity + 1} : p
+      )
+    })),
+
+  decrement: productId =>
+    set(state => ({
+      card: state.card.map(p =>
+        p.id === productId && p.quantity > 0
+          ? {
+              ...p,
+              quantity: Math.max(p.quantity - 1, 0),
+              expanded: p.quantity - 1 === 0 ? false : p.expanded
+            }
+          : p
+      )
+    })),
+  toggleExpanded: (productId: number) =>
+    set(state => ({
+      card: state.card.map(p =>
+        p.id === productId ? {...p, expanded: !p.expanded} : p
+      )
+    })),
 
   card: [],
   fetchProduct: async () => {
@@ -47,30 +68,35 @@ const useStore = create<Store>(set => ({
       const res = await fetch("https://fakestoreapi.com/products", {
         next: {revalidate: 10}
       });
+
       if (!res.ok) {
         throw new Error("Failed to fetch products");
       }
-      const data: Product[] = await res.json();
-      set({card: data});
-      console.log("Fetched products", data); // Débogage pour voir les produits
+
+      const Rawdata = await res.json();
+
+      const data = ProductSchema.array().parse(Rawdata)
+
+      // Initialise les produits avec quantity et expanded
+      const initializedProducts = data.map(product => ({
+        ...product,
+        quantity: 0, // Ajoute quantity
+        expanded: false // Ajoute expanded
+      }));
+
+      // Met à jour le store avec les produits initialisés
+      set({card: initializedProducts});
+
+      console.log("Fetched and initialized products", initializedProducts);
     } catch (error) {
       console.error("Error fetching products:", error);
     }
-    return [];
   },
 
   // cart
   cart: [],
   isCartOpen: false,
   totalQuantity: 0,
-
-  initializeProducts: data => {
-    const initializedProducts = data.map(product => ({
-      ...product,
-      quantity: 0
-    }));
-    set({card: initializedProducts});
-  },
 
   addToCart: product =>
     set(state => {
