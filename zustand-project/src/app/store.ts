@@ -101,25 +101,24 @@ const useStore = create<Store>(set => ({
   addToCart: product =>
     set(state => {
       const existingProduct = state.cart.find(p => p.id === product.id);
-
+  
+      let updatedCart;
       if (existingProduct) {
-        // Met à jour la quantité si le produit est déjà dans le panier
-        const updatedCart = state.cart.map(p =>
+        updatedCart = state.cart.map(p =>
           p.id === product.id ? {...p, quantity: p.quantity + 1} : p
         );
-        return {
-          cart: updatedCart,
-          totalQuantity: state.totalQuantity + 1
-        };
       } else {
-        // Ajoute un nouveau produit au panier
-        return {
-          cart: [...state.cart, {...product, quantity: 1}],
-          totalQuantity: state.totalQuantity + 1
-        };
+        updatedCart = [...state.cart, {...product, quantity: 1}];
       }
+  
+      const totalQuantity = updatedCart.reduce((acc, p) => acc + p.quantity, 0); // Recalcule la quantité totale
+  
+      return {
+        cart: updatedCart,
+        totalQuantity: totalQuantity
+      };
     }),
-
+  
   removeFromCart: id =>
     set(state => {
       const updatedCart = state.cart
@@ -127,11 +126,12 @@ const useStore = create<Store>(set => ({
           p.id === id && p.quantity > 1 ? {...p, quantity: p.quantity - 1} : p
         )
         .filter(p => p.quantity > 0);
-
-      const removedProduct = state.cart.find(p => p.id === id);
+  
+      const totalQuantity = updatedCart.reduce((acc, p) => acc + p.quantity, 0); // Recalculer la quantité totale
+  
       return {
         cart: updatedCart,
-        totalQuantity: state.totalQuantity - (removedProduct?.quantity || 0)
+        totalQuantity: totalQuantity
       };
     }),
 

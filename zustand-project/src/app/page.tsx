@@ -3,7 +3,7 @@ import Cart from "@/components/ui/cart";
 import useStore from "./store";
 
 export default function Card() {
-  const {increment, decrement, toggleExpanded, card} = useStore();
+  const {increment, decrement, toggleExpanded, card, addToCart} = useStore();
 
   const handleToggle = (id: number) => {
     const product = card.find(p => p.id === id);
@@ -16,17 +16,24 @@ export default function Card() {
     // Affiche l'état après
   };
 
+  const handleAddToCart = (productId: number) => {
+    const product = card.find(p => p.id === productId);
+    if (product && product.quantity > 0) {
+      addToCart(product);
+    }
+  };
+
   console.log(JSON.stringify(card, null, 2));
 
   return (
-    <div className="flex flex-wrap  bg-slate-100">
-      {card.map(product => (
-        <div key={product.id}>
-          <div className="flex items-center mt-4">
-            <h1 className="ml-4">Products :</h1>
-            <Cart />
-          </div>
+    <div className="flex flex-wrap bg-slate-100 ">
+      <div className=" mt-20 ml-5 w-full">
+         <h1 >Products :</h1>
+      </div>
+     
 
+      {card.map(product => (
+        <div key={product.id} >
           <div className="max-w-sm m-4 rounded overflow-hidden shadow-lg bg-white border border-blue-50">
             <div className="px-6 py-4">
               <img
@@ -52,6 +59,11 @@ export default function Card() {
                     className="bg-blue-500 text-white p-4 rounded-full text-2xl hover:bg-blue-400 transition duration-300"
                     onClick={() => increment(product.id)}>
                     +
+                  </button>
+                  <button
+                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full "
+                    onClick={() => handleAddToCart(product.id)}>
+                    Add To Cart
                   </button>
                 </div>
               ) : (
