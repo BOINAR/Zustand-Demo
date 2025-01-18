@@ -1,9 +1,9 @@
-"use client"
+"use client";
 import React from "react";
 import useStore from "../../app/store";
 
 export default function Cart() {
-  const {isCartOpen, toggleCartDropdown, cart} = useStore();
+  const {isCartOpen, toggleCartDropdown, cart, totalQuantity} = useStore();
 
   const handleToggleDropdown = () => {
     toggleCartDropdown(!isCartOpen);
@@ -41,14 +41,39 @@ export default function Cart() {
           {cart.map(product => (
             <div
               key={product.id}
-              className="flex justify-between items-center border-b py-2">
-              <p className="w-1/3 text-gray-800">{product.title}</p>
-              <p className="w-1/3 text-gray-600">Qty: {product.quantity}</p>
-              <p className="w-1/3 text-gray-800 text-right">
-                Price: {(product.quantity * product.price).toFixed(2)}
+              className="flex justify-between items-center border-b py-2 ">
+              <p className="w-14 justify-center">
+                <img
+                  src={product.image}
+                  alt={product.title}
+                  
+                />
               </p>
+              <p className="w-1/3 text-gray-800">{product.title}</p>
+              <div className=" flex-col justify-center  ">
+                <p className=" text-gray-600  w-full ">
+                  Qty: {product.quantity}
+                </p>
+
+                <p className=" text-gray-800  w-full ">
+                  Price: {(product.quantity * product.price).toFixed(2)}
+                </p>
+              </div>
             </div>
           ))}
+          <p className="text-gray-800 font-bold mt-4">
+            Total Quantity: {totalQuantity}
+          </p>
+          <p className="text-gray-800 font-bold">
+            Total Price:{" "}
+            {cart
+              .reduce(
+                (sum, product) => sum + product.quantity * product.price,
+                0
+              )
+              .toFixed(2)}{" "}
+            €
+          </p>
         </div>
       )}
     </div>

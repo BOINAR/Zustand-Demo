@@ -24,10 +24,12 @@ type Store = {
   isCartOpen: boolean; // État du dropdown
   toggleCartDropdown: (status: boolean) => void;
   totalQuantity: number; // Total des quantités dans le panier
-  addToCart: (product: Product) => void;
+  addToCart: (product: Product & {quantity: number}) => void;
   removeFromCart: (id: number) => void;
   increment: (id: number) => void;
   decrement: (id: number) => void;
+
+  resetProductQuantity: (id: number) => void;
 
   toggleExpanded: (id: number) => void;
   fetchProduct: () => void;
@@ -35,6 +37,14 @@ type Store = {
 
 const useStore = create<Store>(set => ({
   // card
+ 
+  resetProductQuantity: (id: number) => {
+    set(state => ({
+      card: state.card.map(product =>
+        product.id === id ? {...product, quantity: 0} : product
+      )
+    }));
+  },
 
   increment: productId =>
     set(state => ({
@@ -55,6 +65,7 @@ const useStore = create<Store>(set => ({
           : p
       )
     })),
+
   toggleExpanded: (productId: number) =>
     set(state => ({
       card: state.card.map(p =>
@@ -63,6 +74,7 @@ const useStore = create<Store>(set => ({
     })),
 
   card: [],
+
   fetchProduct: async () => {
     try {
       const res = await fetch("https://fakestoreapi.com/products", {
@@ -75,7 +87,7 @@ const useStore = create<Store>(set => ({
 
       const Rawdata = await res.json();
 
-      const data = ProductSchema.array().parse(Rawdata)
+      const data = ProductSchema.array().parse(Rawdata);
 
       // Initialise les produits avec quantity et expanded
       const initializedProducts = data.map(product => ({
@@ -95,30 +107,33 @@ const useStore = create<Store>(set => ({
 
   // cart
   cart: [],
+
   isCartOpen: false,
   totalQuantity: 0,
 
-  addToCart: product =>
+  addToCart: (product: Product & {quantity: number}) =>
     set(state => {
       const existingProduct = state.cart.find(p => p.id === product.id);
-  
+
       let updatedCart;
       if (existingProduct) {
         updatedCart = state.cart.map(p =>
-          p.id === product.id ? {...p, quantity: p.quantity + 1} : p
+          p.id === product.id
+            ? {...p, quantity: p.quantity + product.quantity}
+            : p
         );
       } else {
         updatedCart = [...state.cart, {...product, quantity: 1}];
       }
-  
+
       const totalQuantity = updatedCart.reduce((acc, p) => acc + p.quantity, 0); // Recalcule la quantité totale
-  
+
       return {
         cart: updatedCart,
         totalQuantity: totalQuantity
       };
     }),
-  
+
   removeFromCart: id =>
     set(state => {
       const updatedCart = state.cart
@@ -126,9 +141,9 @@ const useStore = create<Store>(set => ({
           p.id === id && p.quantity > 1 ? {...p, quantity: p.quantity - 1} : p
         )
         .filter(p => p.quantity > 0);
-  
+
       const totalQuantity = updatedCart.reduce((acc, p) => acc + p.quantity, 0); // Recalculer la quantité totale
-  
+
       return {
         cart: updatedCart,
         totalQuantity: totalQuantity
